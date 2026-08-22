@@ -1,223 +1,1281 @@
 <!DOCTYPE html>
-< lang="ja">
+<html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>319分の1 抽選ゲーム</title>
-    <style>
-        /* --- 全体デザイン --- */
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-            font-family: 'Arial', sans-serif;
-        }
-        /* ゲーム画面とスタート画面のコンテナ */
-        #start-screen,
-        #game-container {
-            background-color: #ffffff;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            width: 300px;
-            box-sizing: border-box; /* paddingを含めた幅にする */
-        }
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-        /* --- スタート画面のデザイン --- */
-        #start-screen {
-            background-color: #333333; /* 暗い背景色 */
-            color: white;
-            border: 5px solid #ffcc00; /* 金色の枠 */
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        #start-screen h1 {
-            color: #ffcc00;
-            font-size: 1.8em; /* サイズを調整 */
-            margin-bottom: 5px;
-        }
-        #start-screen p.subtitle {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #ffcc00; /* 強調色 */
-            margin-top: 0;
-            margin-bottom: 25px;
-        }
-        #start-button {
-            padding: 15px 30px;
-            font-size: 1.2em;
-            color: #333;
-            background-color: #ffcc00;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.1s ease;
-        }
-        #start-button:hover {
-            background-color: #e6b800;
-        }
+<title>フライトゲーム 抽選＆ログ機能付き</title>
 
-        /* --- 抽選ゲーム画面のデザイン（既存） --- */
-        #game-container {
-            display: none; /* 初期状態では非表示 */
-        }
-        #counter-display {
-            margin-bottom: 20px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-            font-size: 1.1em;
-            text-align: left;
-        }
-        .count-item {
-            margin: 5px 0;
-        }
-        #result {
-            font-size: 2em;
-            font-weight: bold;
-            height: 50px;
-            margin-top: 20px;
-            color: #333;
-        }
-        #firework-button {
-            padding: 15px 30px;
-            font-size: 1.5em;
-            color: white;
-            background-color: #ff4500;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.1s ease, opacity 0.3s ease;
-        }
-        #firework-button:hover {
-            background-color: #cc3700;
-        }
-        /* ボタン無効時のスタイル */
-        #firework-button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        .success {
-            color: #008000;
-            animation: fireworks-effect 0.1s ease-in-out 5 alternate;
-        }
-        @keyframes fireworks-effect {
-            from { transform: scale(1.0); }
-            to { transform: scale(1.1); color: #ff00ff;}
-        }
-    </style>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+    * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #111;
+        font-family: Arial, "Hiragino Kaku Gothic ProN", sans-serif;
+        touch-action: none;
+    }
+
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #game {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        max-width: 900px;
+        overflow: hidden;
+        background:
+            linear-gradient(
+                to bottom,
+                #4facfe 0%,
+                #00f2fe 100%
+            );
+    }
+
+    canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    #ui {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        right: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .scoreBox {
+        background: rgba(255,255,255,0.9);
+        padding: 8px 15px;
+        border-radius: 12px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+
+    #score {
+        font-size: 28px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    #best {
+        font-size: 13px;
+        color: #666;
+    }
+
+    #gameOver {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 30;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        backdrop-filter: blur(3px);
+    }
+
+    #gameOverPanel {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.4);
+        width: min(90%, 360px);
+        pointer-events: auto;
+    }
+
+    #resultTitle {
+        margin-top: 0;
+        font-size: 34px;
+        color: #333;
+    }
+
+    #finalScore {
+        font-size: 50px;
+        font-weight: bold;
+        margin: 10px 0;
+        color: #2c3e50;
+    }
+
+    .game-button {
+        border: none;
+        background: #3498db;
+        color: white;
+        font-size: 18px;
+        font-weight: bold;
+        padding: 14px 30px;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: background 0.2s;
+        box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4);
+    }
+
+    .game-button:hover {
+        background: #2980b9;
+    }
+
+    .game-button:active {
+        transform: scale(0.95);
+    }
+
+    #hint {
+        font-size: 13px;
+        color: #777;
+        margin-top: 15px;
+        line-height: 1.6;
+    }
+    
+    .clear-text {
+        color: #ff9800 !important;
+        text-shadow: 2px 2px 0px #ffe0b2;
+    }
+
+    /* 追加: 抽選UI用アニメーションクラス等 */
+    .btn-shine { position: relative; overflow: hidden; }
+    .btn-shine::after {
+        content: "";
+        position: absolute;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+        transform: rotate(45deg);
+        animation: shine 3s infinite;
+    }
+    @keyframes shine { 0% { left: -100%; } 20% { left: 100%; } 100% { left: 100%; } }
+
+    .chest {
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        touch-action: manipulation;
+        pointer-events: auto;
+    }
+    .chest:hover { transform: scale(1.1); }
+    .chest:active { transform: scale(0.9); }
+    .chest.opened {
+        transform: scale(1.2);
+        filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.8));
+    }
+    .chest.dimmed {
+        opacity: 0.3;
+        transform: scale(0.9);
+        filter: grayscale(100%);
+    }
+    .chest-svg { width: 100px; height: 100px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); transition: all 0.3s ease; }
+
+    .log-container {
+        max-height: 60%;
+        overflow-y: auto;
+        width: 100%;
+        padding-right: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .log-item {
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 8px;
+        padding: 12px;
+        border-radius: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .admin-hitbox {
+        position: absolute;
+        top: 0; width: 80px; height: 80px;
+        z-index: 100;
+        pointer-events: auto;
+    }
+    .admin-hitbox-left { left: 0; }
+    .admin-hitbox-right { right: 0; }
+    
+    .loader {
+        width: 20px; height: 20px;
+        border: 3px solid #94a3b8; border-bottom-color: transparent; border-radius: 50%;
+        display: inline-block; animation: rotation 1s linear infinite;
+    }
+    @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .text-rainbow {
+        background: linear-gradient(to right, #ff0000, #ff7f00, #eab308, #22c55e, #3b82f6, #8b5cf6, #ec4899);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: rainbow-anim 3s linear infinite;
+        background-size: 200% auto;
+    }
+    .shadow-rainbow {
+        filter: drop-shadow(0 0 10px rgba(255,255,255,0.8));
+    }
+    @keyframes rainbow-anim {
+        0% { background-position: 0% center; }
+        100% { background-position: -200% center; }
+    }
+</style>
 </head>
+
 <body>
-    <div id="start-screen">
-        <h1>準備はいいか塚田淳！！</h1>
-        <p class="subtitle">319分の1 抽選ゲーム</p>
-        <p>大当たり確率 $1/319$ の運命を、今、決める時！</p>
-        <button id="start-button">
-            ゲームを始める
-        </button>
-    </div>
-    <div id="game-container">
-        <div id="counter-display">
-            <div class="count-item">試行回数: <span id="attempt-count">0</span>回</div>
-            <div class="count-item">当たり回数: <span id="win-count">0</span>回</div>
-        </div>
 
-        <h1>319分の1 抽選ゲーム</h1>
-        <p>ボタンを押して、花火を打ち上げよう！</p>
-        <button id="firework-button">
-            🚀 ボタンを押す
-        </button>
-        <div id="result">
-            結果待ち...
+<div id="game">
+
+    <canvas id="canvas"></canvas>
+
+    <div id="ui">
+        <div class="scoreBox">
+            <div id="score">残り 300 km</div>
+            <div id="best">BEST 0 km</div>
         </div>
     </div>
-    <script>
-        // --- ロジック（JavaScript） ---
-        // 画面要素の取得
-        const startScreen = document.getElementById('start-screen');
-        const gameContainer = document.getElementById('game-container');
-        const startButton = document.getElementById('start-button');
-        const button = document.getElementById('firework-button');
-        const resultDisplay = document.getElementById('result');
-        const attemptCountDisplay = document.getElementById('attempt-count');
-        const winCountDisplay = document.getElementById('win-count');
 
-        const WIN_NUMBER = 1;    
-        const MAX_NUMBER = 319;  
-        const WAIT_TIME = 4100;  
-       
-        // カウンター変数の初期化
-        let attemptCount = 0;
-        let winCount = 0;
+    <div id="start-screen" class="absolute inset-0 z-40 flex flex-col items-center justify-center p-8 bg-slate-900/90 backdrop-blur-sm text-white transition-opacity duration-500">
+        <div class="z-20 text-center flex flex-col items-center w-full max-w-sm">
+            <p class="text-sky-400 font-black text-2xl mb-4 animate-bounce tracking-tighter">
+                準備はいいか！塚田淳！
+            </p>
+            <h1 class="text-5xl font-black mb-10 tracking-tighter text-white text-center leading-tight drop-shadow-md">
+                SKY<br><span class="text-sky-400 text-6xl">FLIGHT</span>
+            </h1>
+            
+            <button onclick="window.startGameClick(event)" class="btn-shine w-full bg-sky-500 text-white py-5 rounded-3xl font-black text-2xl shadow-[0_4px_15px_rgba(14,165,233,0.4)] active:scale-95 transition-transform mb-4 pointer-events-auto">
+                テイクオフ！
+            </button>
 
-        // カウンター表示を更新する関数
-        function updateCounters() {
-            attemptCountDisplay.textContent = attemptCount;
-            winCountDisplay.textContent = winCount;
+            <button onclick="window.showLog(event)" class="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-bold text-lg border border-white/20 shadow-sm active:scale-95 transition pointer-events-auto">
+                共有ログを見る
+            </button>
+        </div>
+    </div>
+
+    <div id="gameOver">
+        <div id="gameOverPanel">
+            <h2 id="resultTitle">墜落...</h2>
+            <div>記録</div>
+            <div id="finalScore">0 km</div>
+            <button id="restartButton" class="game-button">もう一度飛ぶ</button>
+            <div id="hint">
+                画面を押している間は上昇<br>
+                離すと下降<br>
+                ビルにぶつかったらゲームオーバー<br>
+                <span style="color:#ff9800; font-weight:bold;">目標: 300kmでクリア</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 宝箱画面 -->
+    <div id="treasure-screen" class="hidden absolute inset-0 z-50 flex-col items-center justify-center p-8 bg-black/90 text-white">
+        <div class="text-center w-full">
+            <h2 class="text-3xl font-black text-yellow-500 mb-2 drop-shadow-md">GAME CLEAR!!</h2>
+            <p id="treasure-msg" class="text-white text-lg mb-12 font-bold italic transition-opacity duration-300">運命の報酬を選べ！</p>
+            <div class="flex justify-around items-center w-full max-w-md gap-4 mx-auto">
+                <div class="chest" onclick="window.openChest(0)">
+                    <svg class="chest-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="10" width="20" height="10" rx="2" fill="#8B4513" stroke="#FBBF24" stroke-width="1.5"/>
+                        <path d="M2 10C2 7 5 5 12 5C19 5 22 7 22 10" fill="#A0522D" stroke="#FBBF24" stroke-width="1.5"/>
+                        <rect x="10" y="9" width="4" height="3" rx="1" fill="#FBBF24"/>
+                    </svg>
+                    <p class="mt-2 text-[10px] font-bold text-yellow-500 uppercase tracking-widest drop-shadow-sm chest-label">宝箱 A</p>
+                </div>
+                <div class="chest" onclick="window.openChest(1)">
+                    <svg class="chest-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="10" width="20" height="10" rx="2" fill="#8B4513" stroke="#FBBF24" stroke-width="1.5"/>
+                        <path d="M2 10C2 7 5 5 12 5C19 5 22 7 22 10" fill="#A0522D" stroke="#FBBF24" stroke-width="1.5"/>
+                        <rect x="10" y="9" width="4" height="3" rx="1" fill="#FBBF24"/>
+                    </svg>
+                    <p class="mt-2 text-[10px] font-bold text-yellow-500 uppercase tracking-widest drop-shadow-sm chest-label">宝箱 B</p>
+                </div>
+                <div class="chest" onclick="window.openChest(2)">
+                    <svg class="chest-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="10" width="20" height="10" rx="2" fill="#8B4513" stroke="#FBBF24" stroke-width="1.5"/>
+                        <path d="M2 10C2 7 5 5 12 5C19 5 22 7 22 10" fill="#A0522D" stroke="#FBBF24" stroke-width="1.5"/>
+                        <rect x="10" y="9" width="4" height="3" rx="1" fill="#FBBF24"/>
+                    </svg>
+                    <p class="mt-2 text-[10px] font-bold text-yellow-500 uppercase tracking-widest drop-shadow-sm chest-label">宝箱 C</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ダブルアップ画面 -->
+    <div id="double-up-screen" class="hidden absolute inset-0 z-50 flex-col items-center justify-center p-8 bg-black/95 text-white">
+        <div class="text-center w-full">
+            <h2 id="double-up-title" class="font-black text-rose-500 mb-6 drop-shadow-md animate-pulse tracking-tighter flex flex-col items-center gap-1">
+                <span class="text-3xl sm:text-4xl w-full">ダブルアップチャレンジ</span>
+                <span class="text-xl sm:text-2xl text-rose-400 drop-shadow-sm">(1回目)</span>
+            </h2>
+            
+            <p class="text-slate-300 text-lg mb-8 font-bold italic">現在の報酬: <span id="current-reward-text" class="text-3xl text-blue-500 drop-shadow-md">0円</span></p>
+
+            <div id="double-up-actions" class="flex flex-col gap-4 w-full max-w-sm mx-auto">
+                <div class="bg-slate-800/80 border border-white/20 rounded-xl p-3 mb-2 shadow-lg">
+                    <p class="text-cyan-500 font-black text-xl mb-1 tracking-wider drop-shadow-sm">勝率 50%</p>
+                    <p class="text-slate-300 text-sm">成功すれば報酬<span class="text-yellow-500 font-bold text-xl ml-1">2倍</span>！<br>失敗すれば<span class="text-rose-500 font-bold">すべて没収</span>。</p>
+                </div>
+                
+                <button onclick="window.playDoubleUp()" class="btn-shine w-full bg-rose-600 text-white py-4 rounded-3xl font-black text-2xl shadow-[0_4px_15px_rgba(225,29,72,0.4)] active:scale-95 transition-transform pointer-events-auto">挑戦する</button>
+                <button onclick="window.declineDoubleUp()" class="w-full bg-slate-800 border border-white/20 text-slate-300 py-3 rounded-2xl font-bold text-lg shadow-sm active:scale-95 transition pointer-events-auto">やめておく (確定)</button>
+            </div>
+
+            <div id="double-up-presentation" class="hidden w-full max-w-sm mx-auto flex-col justify-center items-center mt-4 min-h-[200px]">
+                <div id="double-up-roulette" class="hidden w-full flex-col items-center justify-center">
+                    <p id="roulette-status-text" class="text-slate-400 font-bold mb-4 animate-pulse text-lg">抽選中...</p>
+                    <div id="roulette-box" class="w-full bg-slate-800 border-4 border-white/20 rounded-2xl p-8 text-center transition-colors duration-75 shadow-2xl">
+                        <span id="roulette-text" class="text-5xl font-black text-white drop-shadow-md">運命</span>
+                    </div>
+                </div>
+                <div id="double-up-result" class="hidden w-full flex-col items-center justify-center opacity-0 transition-opacity duration-300">
+                    <div id="double-up-result-text" class="text-6xl sm:text-7xl font-black transform scale-50 transition-transform duration-500"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最終クリア画面 -->
+    <div id="clear-screen" class="hidden absolute inset-0 z-50 flex-col items-center justify-center p-6 bg-black/95 text-white">
+        <div class="text-7xl mb-4 animate-pulse drop-shadow-md">👑</div>
+        <h2 class="text-2xl font-black mb-6 text-sky-400 uppercase tracking-tighter text-center drop-shadow-sm">伝説達成</h2>
+        <div class="bg-slate-800/90 border border-white/20 rounded-[2.5rem] p-8 w-full max-w-xs mb-8 text-center relative overflow-hidden shadow-2xl">
+            <div id="timestamp" class="text-[10px] font-bold text-slate-400 mb-4 uppercase tracking-widest"></div>
+            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 italic">獲得報酬</p>
+            <p id="bonus-value-text" class="text-5xl font-black italic tracking-tighter mb-4 text-white drop-shadow-md">0円</p>
+            <div class="border-t border-white/20 pt-4">
+                <p class="text-[10px] text-slate-400 font-bold tracking-wider italic">認定プレイヤー: <span class="text-white font-black">塚田淳</span></p>
+            </div>
+        </div>
+        <p class="text-yellow-500 font-black mb-8 text-center text-xl animate-bounce drop-shadow-sm">最高のフライトだ、塚田淳！！</p>
+        <button onclick="window.backToTitle()" class="w-full max-w-xs bg-sky-500 py-5 rounded-3xl font-black text-xl text-white shadow-xl active:scale-95 transition pointer-events-auto">タイトルに戻る</button>
+    </div>
+
+    <!-- ログ画面 -->
+    <div id="log-screen" class="hidden absolute inset-0 z-50 flex-col items-center justify-center p-6 bg-black/95 text-white">
+        <div class="admin-hitbox admin-hitbox-left" onclick="window.handleAdminTap('left')"></div>
+        <div class="admin-hitbox admin-hitbox-right" onclick="window.handleAdminTap('right')"></div>
+        
+        <h2 class="text-2xl font-black mb-6 text-sky-400 uppercase tracking-tighter text-center italic drop-shadow-sm">共有：栄光の記録</h2>
+        <div id="log-list" class="log-container relative z-10 w-full max-w-sm">
+            <div class="flex justify-center py-10"><span class="loader"></span></div>
+        </div>
+        <button onclick="window.backToStartFromLog()" class="mt-8 w-full max-w-xs bg-slate-800 border border-white/20 text-white py-4 rounded-3xl font-black text-xl shadow-lg active:scale-95 transition relative z-10 pointer-events-auto">戻る</button>
+    </div>
+
+    <!-- 管理者モーダル -->
+    <div id="admin-confirm-modal" class="hidden absolute inset-0 bg-black/80 z-[200] flex-col items-center justify-center p-4">
+        <div class="bg-slate-800 p-6 rounded-2xl w-full max-w-sm text-center border border-rose-500/50 shadow-2xl">
+            <h3 class="text-xl font-black text-rose-500 mb-4">【管理者認証】</h3>
+            <p class="mb-6 font-bold text-white text-sm">すべての共有ログを消去しますか？<br>この操作は取り消せません。</p>
+            <div class="flex gap-4">
+                <button onclick="window.cancelAdminClear()" class="flex-1 py-3 bg-slate-600 text-white rounded-xl font-bold active:scale-95 transition pointer-events-auto">キャンセル</button>
+                <button onclick="window.executeAdminClear()" class="flex-1 py-3 bg-rose-600 text-white rounded-xl font-bold shadow-lg shadow-rose-600/20 active:scale-95 transition pointer-events-auto">消去する</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyD9TtJvfUILwBzsDjXAlZBH5R5Khp1pRzA",
+    authDomain: "jungame.firebaseapp.com",
+    projectId: "jungame",
+    storageBucket: "jungame.firebasestorage.app",
+    messagingSenderId: "410177738553",
+    appId: "1:410177738553:web:56d7e876c1c7b4333a7ae8",
+    measurementId: "G-QGL9HRKVHX"
+};
+
+let db, auth;
+const appId = 'sky-flight-game-challenge'; 
+let currentUser = null;
+
+// Firebase Init
+async function initFirebase() {
+    try {
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        onAuthStateChanged(auth, async (user) => { 
+            currentUser = user; 
+        });
+        await signInAnonymously(auth);
+    } catch (err) { 
+        console.error("Firebase init failed.", err); 
+    }
+}
+initFirebase();
+
+let audioCtx;
+function initAudio() { 
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSound(type) {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime, osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    
+    if (type === 'tick') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(1000, now + 0.05);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+        osc.start(now);
+        osc.stop(now + 0.05);
+    } else if (type === 'correct') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1320, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'wrong') {
+        const playB = (t) => {
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'square';
+            o.frequency.setValueAtTime(120, t); g.gain.setValueAtTime(0.1, t);
+            g.gain.linearRampToValueAtTime(0, t + 0.1); o.start(t); o.stop(t + 0.1);
+        };
+        playB(now); playB(now + 0.15); 
+    } else if (type === 'treasure') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.4);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.6);
+        osc.start(now);
+        osc.stop(now + 0.6);
+    }
+}
+
+function getRewardColorClass(reward) {
+    if (reward === 0) return { class: 'text-slate-500', shadow: 'none' };
+    if (reward === 1500) return { class: 'text-sky-400', shadow: 'drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]' }; 
+    if (reward === 2500) return { class: 'text-blue-500', shadow: 'drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]' }; 
+    if (reward === 3000) return { class: 'text-indigo-500 font-black', shadow: 'drop-shadow-[0_0_12px_rgba(99,102,241,0.6)]' }; 
+    if (reward === 3500) return { class: 'text-purple-500 font-black', shadow: 'drop-shadow-[0_0_12px_rgba(168,85,247,0.6)]' }; 
+    if (reward === 5000) return { class: 'text-fuchsia-500 font-black', shadow: 'drop-shadow-[0_0_15px_rgba(217,70,239,0.7)]' }; 
+    if (reward === 6000) return { class: 'text-orange-500 font-black', shadow: 'drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]' }; 
+    if (reward === 7000) return { class: 'text-red-500 font-black animate-pulse', shadow: 'drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]' }; 
+    if (reward === 10000) return { class: 'text-rose-600 font-black animate-pulse', shadow: 'drop-shadow-[0_0_20px_rgba(225,29,72,0.9)]' }; 
+    if (reward === 14000) return { class: 'text-rainbow font-black', shadow: 'shadow-rainbow' }; 
+    return { class: 'text-white', shadow: 'none' };
+}
+
+function updateRewardDisplay(elId, amount) {
+    const el = document.getElementById(elId);
+    const styleInfo = getRewardColorClass(amount);
+    el.innerText = `${amount.toLocaleString()}円`;
+    el.className = `text-3xl transition-all duration-500 ${styleInfo.class} ${styleInfo.shadow}`;
+}
+
+let chestValues = [];
+let isChestOpened = false;
+let currentReward = 0;
+let doubleUpCount = 0;
+
+window.prepareTreasure = () => {
+    isChestOpened = false;
+    document.getElementById('gameOver').style.display = "none";
+    
+    const chests = document.querySelectorAll('.chest');
+    const labels = ['宝箱 A', '宝箱 B', '宝箱 C'];
+    chests.forEach((chest, index) => {
+        chest.classList.remove('opened', 'dimmed');
+        const label = chest.querySelector('.chest-label');
+        if (label) label.innerText = labels[index];
+    });
+    document.getElementById('treasure-msg').innerText = "運命の報酬を選べ！";
+
+    document.getElementById('treasure-screen').classList.remove('hidden');
+    document.getElementById('treasure-screen').classList.add('flex');
+    
+    let array = [1500, 2500, 3500];
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    chestValues = array;
+};
+
+window.openChest = (index) => {
+    if (isChestOpened) return;
+    isChestOpened = true; 
+    initAudio();
+    playSound('treasure');
+    currentReward = chestValues[index];
+    
+    const chests = document.querySelectorAll('.chest');
+    chests.forEach((chest, i) => {
+        if (i === index) {
+            chest.classList.add('opened');
+            const label = chest.querySelector('.chest-label');
+            if(label) label.innerText = `${currentReward}円`;
+        } else {
+            chest.classList.add('dimmed');
         }
-       
-        // 初回表示の更新
-        updateCounters();
-       
-        // 🌟 スタートボタンのイベントリスナー（画面切り替え処理） 🌟
-        startButton.addEventListener('click', () => {
-            // スタート画面を非表示にし、ゲーム画面を表示する
-            startScreen.style.display = 'none';
-            gameContainer.style.display = 'block';
-            // game-containerがflexboxで中央揃えされているため、blockでも問題ありません。
-        });
+    });
 
-        button.addEventListener('click', () => {
-            // **試行回数をインクリメント**
-            attemptCount++;
-            updateCounters();
+    document.getElementById('treasure-msg').innerText = "運命の扉が開かれた...！";
 
-            // 1. ボタンを無効化
-            button.disabled = true;
-           
-            // 2. ウェイト中であることを表示
-            resultDisplay.textContent = '⏱️ 抽選中...しばらくお待ちください。';
-            resultDisplay.classList.remove('success');
+    setTimeout(() => {
+        doubleUpCount = 0;
+        
+        document.getElementById('double-up-title').innerHTML = `
+            <span class="text-3xl sm:text-4xl w-full">ダブルアップチャレンジ</span>
+            <span class="text-xl sm:text-2xl text-rose-400 drop-shadow-sm">(1回目)</span>
+        `;
+        
+        updateRewardDisplay('current-reward-text', currentReward);
+        
+        document.getElementById('double-up-actions').classList.remove('hidden');
+        document.getElementById('double-up-presentation').classList.add('hidden');
+        document.getElementById('double-up-roulette').classList.add('hidden');
+        document.getElementById('double-up-roulette').classList.remove('flex');
+        document.getElementById('double-up-result').classList.add('hidden');
+        document.getElementById('double-up-result').classList.remove('flex');
+        document.getElementById('double-up-result').classList.add('opacity-0');
+        
+        const statusText = document.getElementById('roulette-status-text');
+        if(statusText) {
+            statusText.innerText = "抽選中...";
+            statusText.className = "text-slate-400 font-bold mb-4 animate-pulse text-lg";
+        }
+        
+        document.getElementById('treasure-screen').classList.remove('flex');
+        document.getElementById('treasure-screen').classList.add('hidden');
+        document.getElementById('double-up-screen').classList.remove('hidden');
+        document.getElementById('double-up-screen').classList.add('flex');
+    }, 1500);
+};
 
-            // 3. 1から319までのランダムな整数を生成
-            const randomNumber = Math.floor(Math.random() * MAX_NUMBER) + 1;
-           
-            console.log(`生成された数字: ${randomNumber}`);
+window.playDoubleUp = () => {
+    initAudio();
+    playSound('tick');
+    document.getElementById('double-up-actions').classList.add('hidden');
+    document.getElementById('double-up-presentation').classList.remove('hidden');
+    document.getElementById('double-up-presentation').classList.add('flex');
+    document.getElementById('double-up-roulette').classList.remove('hidden');
+    document.getElementById('double-up-roulette').classList.add('flex');
+    
+    const rBox = document.getElementById('roulette-box');
+    const rText = document.getElementById('roulette-text');
+    const statusText = document.getElementById('roulette-status-text');
+    
+    statusText.innerText = "抽選中...";
+    statusText.className = "text-slate-400 font-bold mb-4 animate-pulse text-lg";
+    
+    const duration = 8000; 
+    const startTime = Date.now();
+    let ticks = 0;
+    const isWin = Math.random() < 0.5;
 
-            // 4. 4.1秒後に結果を表示し、ボタンを有効化する
+    function runRoulette() {
+        const elapsed = Date.now() - startTime;
+        ticks++;
+        playSound('tick');
+
+        if (ticks % 2 === 0) {
+            rBox.className = "w-full bg-rose-900 border-4 border-rose-400 rounded-2xl p-8 text-center shadow-[0_4px_15px_rgba(244,63,94,0.3)]";
+            rText.innerText = "成功！？";
+            rText.className = "text-5xl font-black text-rose-400 drop-shadow-md";
+        } else {
+            rBox.className = "w-full bg-blue-900 border-4 border-blue-400 rounded-2xl p-8 text-center shadow-[0_4px_15px_rgba(59,130,246,0.3)]";
+            rText.innerText = "失敗！？";
+            rText.className = "text-5xl font-black text-blue-400 drop-shadow-md";
+        }
+
+        if (elapsed > 2000 && elapsed <= 4000) {
+            statusText.innerText = "まだまだ！";
+            statusText.className = "text-amber-500 font-bold mb-4 animate-pulse text-xl drop-shadow-sm";
+        } else if (elapsed > 4000 && elapsed <= 5500) {
+            statusText.innerText = "どっちだ！？";
+            statusText.className = "text-orange-500 font-black mb-4 animate-bounce text-2xl drop-shadow-sm";
+        } else if (elapsed > 5500 && elapsed <= 7000) {
+            statusText.innerText = "決まるぞ！";
+            statusText.className = "text-rose-500 font-black mb-4 animate-ping text-3xl drop-shadow-sm";
+        } else if (elapsed > 7000) {
+            statusText.innerText = "どっちだ！！";
+            statusText.className = "text-red-500 font-black mb-4 animate-ping text-4xl drop-shadow-lg";
+        }
+
+        if (elapsed >= duration) {
+            showDoubleUpResult(isWin);
+        } else {
+            const progress = elapsed / duration;
+            const delay = 50 + (progress * progress) * 350; 
+            setTimeout(runRoulette, delay);
+        }
+    }
+    setTimeout(runRoulette, 50);
+};
+
+function showDoubleUpResult(isWin) {
+    const resEl = document.getElementById('double-up-result');
+    const resText = document.getElementById('double-up-result-text');
+    
+    document.getElementById('double-up-roulette').classList.add('hidden');
+    document.getElementById('double-up-roulette').classList.remove('flex');
+    resEl.classList.remove('hidden');
+    resEl.classList.add('flex');
+    
+    setTimeout(() => resEl.classList.remove('opacity-0'), 50);
+    
+    if (isWin) {
+        playSound('correct');
+        currentReward *= 2;
+        doubleUpCount++;
+        
+        resText.innerText = "成功！！";
+        resText.className = "text-6xl sm:text-7xl font-black text-yellow-500 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)] transform scale-110 transition-transform duration-500";
+        
+        setTimeout(() => {
+            updateRewardDisplay('current-reward-text', currentReward);
             setTimeout(() => {
-                // 4-1. 当たり判定（条件分岐）
-                if (randomNumber === WIN_NUMBER) {
-                    // 当たりの場合
-                   
-                    // **当たり回数をインクリメント**
-                    winCount++;
-                    updateCounters();
+                resEl.classList.add('opacity-0');
+                setTimeout(() => {
+                    if (doubleUpCount < 2) {
+                        document.getElementById('double-up-title').innerHTML = `
+                            <span class="text-3xl sm:text-4xl w-full">ダブルアップチャレンジ</span>
+                            <span class="text-xl sm:text-2xl text-rose-400 drop-shadow-sm">(2回目)</span>
+                        `;
+                        document.getElementById('double-up-actions').classList.remove('hidden');
+                        resEl.classList.add('hidden');
+                        resEl.classList.remove('flex');
+                        document.getElementById('double-up-presentation').classList.add('hidden');
+                        document.getElementById('double-up-presentation').classList.remove('flex');
+                    } else {
+                        finishGame();
+                    }
+                }, 300);
+            }, 1200); 
+        }, 1000); 
+    } else {
+        playSound('wrong');
+        currentReward = 0;
+        resText.innerText = "失敗...";
+        resText.className = "text-6xl sm:text-7xl font-black text-slate-500 drop-shadow-md transform scale-100 transition-transform duration-500";
+        
+        setTimeout(() => {
+            updateRewardDisplay('current-reward-text', currentReward);
+            setTimeout(() => {
+                resEl.classList.add('opacity-0');
+                setTimeout(() => finishGame(), 300);
+            }, 1200); 
+        }, 1000); 
+    }
+}
 
-                    resultDisplay.textContent = '🎉 大当たり！花火が打ち上がった！ 🎉';
-                    resultDisplay.classList.add('success');
-                    // アラートで特別感
-                    alert("✨ 祝！花火大当たり！ ✨");
-                } else {
-                    // ハズレの場合
-                    resultDisplay.textContent = `ハズレ... (出目: ${randomNumber}) また挑戦しよう。`;
-                    resultDisplay.classList.remove('success');
-                }
-               
-                // 4-2. ボタンを有効化
-                button.disabled = false;
+window.declineDoubleUp = () => finishGame();
 
-            }, WAIT_TIME);
+function finishGame() {
+    const bonusTextEl = document.getElementById('bonus-value-text');
+    const styleInfo = getRewardColorClass(currentReward);
+    
+    bonusTextEl.innerText = `${currentReward.toLocaleString()}円`;
+    bonusTextEl.className = `text-5xl font-black italic tracking-tighter mb-4 transition-all duration-1000 ${styleInfo.class} ${styleInfo.shadow}`;
+
+    const now = new Date();
+    const dateStr = now.getFullYear() + '/' + ('0' + (now.getMonth() + 1)).slice(-2) + '/' + ('0' + now.getDate()).slice(-2);
+    const timeStr = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ':' + ('0' + now.getSeconds()).slice(-2);
+    document.getElementById('timestamp').innerText = `${dateStr} ${timeStr}`;
+    
+    document.getElementById('double-up-screen').classList.remove('flex');
+    document.getElementById('double-up-screen').classList.add('hidden');
+    document.getElementById('clear-screen').classList.remove('hidden');
+    document.getElementById('clear-screen').classList.add('flex');
+
+    if (db && currentUser) {
+        const logCol = collection(db, 'artifacts', appId, 'public', 'data', 'logs');
+        addDoc(logCol, { 
+            date: dateStr, time: timeStr, reward: currentReward, 
+            timestamp: serverTimestamp(), localTime: Date.now() 
+        }).catch(e => console.error(e));
+    }
+}
+
+let unsubscribeLogs = null;
+
+window.startGameClick = (e) => {
+    if (e) e.stopPropagation();
+    if (!running && document.getElementById("gameOver").style.display !== "flex") {
+        resetGame();
+    }
+};
+
+window.showLog = async (e) => {
+    if (e) e.stopPropagation();
+    
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('flex');
+    document.getElementById('log-screen').classList.remove('hidden');
+    document.getElementById('log-screen').classList.add('flex');
+    
+    const listEl = document.getElementById('log-list');
+    
+    if (!db) {
+        listEl.innerHTML = '<p class="text-slate-400 text-center py-8">接続エラー</p>';
+        return;
+    }
+
+    if (!currentUser && auth) {
+        try {
+            const userCred = await signInAnonymously(auth);
+            currentUser = userCred.user;
+        } catch(err) {
+            listEl.innerHTML = '<p class="text-slate-400 text-center py-8">認証エラー</p>';
+            return;
+        }
+    }
+
+    if (unsubscribeLogs) unsubscribeLogs();
+    const logCol = collection(db, 'artifacts', appId, 'public', 'data', 'logs');
+    unsubscribeLogs = onSnapshot(logCol, (snap) => {
+        const logs = snap.docs.map(d => d.data()).sort((a, b) => {
+            const timeA = a.localTime || (a.timestamp?.seconds * 1000) || 0;
+            const timeB = b.localTime || (b.timestamp?.seconds * 1000) || 0;
+            return timeB - timeA;
         });
-    </script>
+
+        if (logs.length === 0) { listEl.innerHTML = '<p class="text-slate-400 text-center py-8">記録なし</p>'; return; }
+        
+        listEl.innerHTML = logs.map(l => {
+            const styleInfo = getRewardColorClass(l.reward || 0);
+            const formattedReward = `${(l.reward || 0).toLocaleString()}円`;
+            
+            return `
+            <div class="log-item">
+                <div>
+                    <div class="text-[10px] text-slate-400">${l.date} ${l.time}</div>
+                    <div class="text-xs text-sky-400 font-black drop-shadow-sm">CLEARED</div>
+                </div>
+                <div class="text-2xl font-black italic ${styleInfo.class} ${styleInfo.shadow}">${formattedReward}</div>
+            </div>`;
+        }).join('');
+    });
+};
+
+window.backToStartFromLog = () => {
+    document.getElementById('log-screen').classList.remove('flex');
+    document.getElementById('log-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
+    document.getElementById('start-screen').classList.add('flex');
+    if (unsubscribeLogs) unsubscribeLogs();
+};
+
+window.backToTitle = () => {
+    document.getElementById('clear-screen').classList.remove('flex');
+    document.getElementById('clear-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
+    document.getElementById('start-screen').classList.add('flex');
+    
+    // 見た目だけリセットして、再スタート待ち
+    running = false;
+    score = 0;
+    scoreEl.textContent = "残り " + CLEAR_SCORE + " km";
+    worldX = 0;
+    cameraX = 0;
+    speed = 4.0;
+    player.x = 160;
+    player.y = height / 2;
+    player.vy = 0;
+    obstacles = [];
+    particles = [];
+    initClouds();
+    createInitialObstacles();
+};
+
+let leftTap = 0, lastTap = 0;
+window.handleAdminTap = (side) => {
+    const now = Date.now();
+    if (now - lastTap > 2000) leftTap = 0;
+    lastTap = now;
+    if (side === 'left') leftTap++;
+    else if (side === 'right' && leftTap >= 3) {
+        leftTap = 0;
+        document.getElementById('admin-confirm-modal').classList.remove('hidden');
+        document.getElementById('admin-confirm-modal').classList.add('flex');
+    }
+};
+
+window.cancelAdminClear = () => { 
+    document.getElementById('admin-confirm-modal').classList.add('hidden');
+    document.getElementById('admin-confirm-modal').classList.remove('flex');
+};
+
+window.executeAdminClear = async () => {
+    document.getElementById('admin-confirm-modal').classList.add('hidden');
+    document.getElementById('admin-confirm-modal').classList.remove('flex');
+    if (db && currentUser) {
+        const logCol = collection(db, 'artifacts', appId, 'public', 'data', 'logs');
+        const snap = await getDocs(logCol);
+        for (const d of snap.docs) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'logs', d.id)); }
+    }
+};
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const game = document.getElementById("game");
+const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+const startScreen = document.getElementById("start-screen");
+const gameOverScreen = document.getElementById("gameOver");
+const resultTitle = document.getElementById("resultTitle");
+const finalScore = document.getElementById("finalScore");
+const restartButton = document.getElementById("restartButton");
+
+let width = 0;
+let height = 0;
+
+function resize() {
+    const rect = game.getBoundingClientRect();
+    width = rect.width;
+    height = rect.height;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+let running = false;
+let holding = false;
+let isGameOverAnimating = false; // ← 追加: ゲームオーバー画面表示待ちフラグ
+
+let score = 0;
+let best = Number(localStorage.getItem("flightBestPt") || 0);
+const CLEAR_SCORE = 300; 
+
+let player = { x: 160, y: 0, vy: 0, radius: 8 };
+let obstacles = [];
+let particles = [];
+let clouds = [];
+
+let cameraX = 0;
+let worldX = 0;
+let lastTime = 0;
+
+const gravity = 0.38;
+const lift = -0.85;
+let speed = 4.0;
+
+bestEl.textContent = "BEST " + best + " km";
+
+function initClouds() {
+    clouds = [];
+    for (let i = 0; i < 15; i++) {
+        clouds.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            size: 30 + Math.random() * 60,
+            speed: 0.2 + Math.random() * 0.8
+        });
+    }
+}
+
+function resetGame() {
+    score = 0;
+    scoreEl.textContent = "残り " + CLEAR_SCORE + " km";
+    worldX = 0;
+    cameraX = 0;
+    speed = 4.0;
+
+    player.x = 160;
+    player.y = height / 2;
+    player.vy = 0;
+
+    obstacles = [];
+    particles = [];
+    
+    initClouds();
+    createInitialObstacles();
+
+    running = true;
+    startScreen.classList.add('hidden');
+    startScreen.classList.remove('flex');
+    gameOverScreen.style.display = "none";
+    resultTitle.classList.remove("clear-text");
+}
+
+function createInitialObstacles() {
+    obstacles = [];
+    let x = 600;
+    for (let i = 0; i < 10; i++) {
+        createObstacle(x);
+        x += 260 + Math.random() * 150;
+    }
+}
+
+function createObstacle(x) {
+    const gapSize = Math.max(130, 250 - score * (120 / CLEAR_SCORE));
+    const margin = 90;
+    const gapCenter = margin + Math.random() * (height - margin * 2);
+
+    obstacles.push({
+        x: x,
+        width: 60,
+        gapCenter: gapCenter,
+        gapSize: gapSize,
+        passed: false,
+        color: Math.random() > 0.5 ? "#2c3e50" : "#34495e"
+    });
+}
+
+function spawnObstacle() {
+    const last = obstacles.length > 0 ? obstacles[obstacles.length - 1].x : worldX + 500;
+    createObstacle(last + 260 + Math.random() * 150);
+}
+
+function update(dt) {
+    const delta = dt / 16.666;
+    
+    // ▼修正: ゲーム状態(running)に関わらず、パーティクルと雲は動かし続ける
+    updateParticles(delta);
+    for (let c of clouds) {
+        c.x -= c.speed * speed * 0.2 * delta;
+        if (c.x + c.size < 0) {
+            c.x = width + c.size;
+            c.y = Math.random() * height;
+        }
+    }
+
+    if (!running) return;
+
+    if (holding) {
+        player.vy += lift * delta;
+    } else {
+        player.vy += gravity * delta;
+    }
+
+    player.vy *= Math.pow(0.98, delta);
+    player.y += player.vy * delta;
+
+    worldX += speed * delta;
+    speed += 0.0015 * delta;
+
+    // ▼修正: 雲の更新処理は上部に移動したためここから削除
+
+    if (Math.random() < 0.6) {
+        particles.push({
+            x: player.x - 15,
+            y: player.y,
+            vx: -speed * 0.8 + (Math.random() - 0.5),
+            vy: (Math.random() - 0.5) * 0.5,
+            life: 1,
+            type: 'smoke'
+        });
+    }
+
+    while (obstacles.length === 0 || obstacles[obstacles.length - 1].x < worldX + width + 500) {
+        spawnObstacle();
+    }
+    obstacles = obstacles.filter(o => o.x > worldX - 200);
+
+    for (const o of obstacles) {
+        const screenX = o.x - worldX + player.x;
+
+        if (player.x + player.radius > screenX && player.x - player.radius < screenX + o.width) {
+            const gapTop = o.gapCenter - o.gapSize / 2;
+            const gapBottom = o.gapCenter + o.gapSize / 2;
+
+            if (player.y - player.radius < gapTop || player.y + player.radius > gapBottom) {
+                createExplosion(player.x, player.y);
+                endGame(false);
+                return;
+            }
+        }
+
+        if (!o.passed && screenX + o.width < player.x) {
+            o.passed = true;
+            score++;
+            scoreEl.textContent = "残り " + Math.max(0, CLEAR_SCORE - score) + " km";
+
+            for(let i=0; i<5; i++) {
+                particles.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 1,
+                    type: 'star'
+                });
+            }
+            
+            if (score >= CLEAR_SCORE) {
+                endGame(true);
+                return;
+            }
+        }
+    }
+
+    if (player.y < -20 || player.y > height + 20) {
+        createExplosion(player.x, player.y);
+        endGame(false);
+    }
+
+    // ▼修正: パーティクルの更新処理は上部に移動したためここから削除
+}
+
+function createExplosion(x, y) {
+    for (let i = 0; i < 30; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            life: 1,
+            type: 'explosion'
+        });
+    }
+}
+
+function updateParticles(delta) {
+    particles.forEach(p => {
+        p.x += p.vx * delta;
+        p.y += p.vy * delta;
+        
+        if (p.type === 'smoke') p.life -= 0.03 * delta;
+        else if (p.type === 'star') p.life -= 0.05 * delta;
+        else if (p.type === 'explosion') p.life -= 0.02 * delta;
+    });
+    particles = particles.filter(p => p.life > 0);
+}
+
+function drawBackground() {
+    ctx.clearRect(0, 0, width, height);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    for (let c of clouds) {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+        ctx.arc(c.x + c.size * 0.5, c.y - c.size * 0.2, c.size * 0.8, 0, Math.PI * 2);
+        ctx.arc(c.x + c.size * 0.8, c.y, c.size * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawObstacles() {
+    for (const o of obstacles) {
+        const x = o.x - worldX + player.x;
+        const gapTop = o.gapCenter - o.gapSize / 2;
+        const gapBottom = o.gapCenter + o.gapSize / 2;
+
+        ctx.fillStyle = o.color;
+        
+        ctx.fillRect(x, 0, o.width, gapTop);
+        ctx.fillRect(x, gapBottom, o.width, height - gapBottom);
+
+        ctx.fillStyle = "rgba(241, 196, 15, 0.6)"; 
+        const windowSize = 8;
+        const margin = 8;
+        
+        for (let wy = 20; wy < gapTop - 15; wy += 25) {
+            ctx.fillRect(x + margin, wy, windowSize, windowSize);
+            ctx.fillRect(x + o.width - margin - windowSize, wy, windowSize, windowSize);
+        }
+        for (let wy = gapBottom + 20; wy < height - 15; wy += 25) {
+            ctx.fillRect(x + margin, wy, windowSize, windowSize);
+            ctx.fillRect(x + o.width - margin - windowSize, wy, windowSize, windowSize);
+        }
+    }
+}
+
+function drawAirplane() {
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    
+    const angle = Math.min(Math.max(player.vy * 0.08, -Math.PI / 4), Math.PI / 4);
+    ctx.rotate(angle);
+
+    ctx.fillStyle = "#e74c3c";
+    ctx.beginPath();
+    ctx.moveTo(-10, -3);
+    ctx.lineTo(-18, -12);
+    ctx.lineTo(-18, 0);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 18, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = "#85c1e9";
+    ctx.beginPath();
+    ctx.arc(10, -2, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#bdc3c7";
+    ctx.beginPath();
+    ctx.moveTo(3, 0);
+    ctx.lineTo(-6, 14);
+    ctx.lineTo(6, 14);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawParticles() {
+    for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life);
+
+        if (p.type === 'smoke') {
+            ctx.fillStyle = "#fff";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3 + (1 - p.life) * 5, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (p.type === 'star') {
+            ctx.fillStyle = "#f1c40f";
+            ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+        } else if (p.type === 'explosion') {
+            ctx.fillStyle = Math.random() > 0.5 ? "#e74c3c" : "#f39c12";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2 + Math.random() * 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    ctx.globalAlpha = 1;
+}
+
+function draw() {
+    drawBackground();
+    drawObstacles();
+    drawParticles();
+    if (running || resultTitle.textContent === "GAME CLEAR!!") {
+        drawAirplane();
+    }
+}
+
+function endGame(isClear) {
+    running = false;
+    holding = false;
+
+    if (score > best) {
+        best = score;
+        localStorage.setItem("flightBestPt", best);
+        bestEl.textContent = "BEST " + best + " km";
+    }
+
+    finalScore.textContent = score + " km";
+    
+    if (isClear) {
+        resultTitle.textContent = "GAME CLEAR!!";
+        resultTitle.classList.add("clear-text");
+        
+        // すぐに宝箱抽選への遷移
+        window.prepareTreasure();
+
+    } else {
+        resultTitle.textContent = "墜落...";
+        resultTitle.classList.remove("clear-text");
+        isGameOverAnimating = true; // ← 追加: 演出中フラグをオン
+        setTimeout(() => {
+            gameOverScreen.style.display = "flex";
+            isGameOverAnimating = false; // ← 追加: 表示完了でオフ
+        }, 500);
+    }
+}
+
+function startHold(e) {
+    // ログボタンや各種UI操作中は反応させない
+    if (e.target.closest('button') || e.target.closest('.chest') || e.target.closest('.admin-hitbox')) return;
+    
+    const isUIOpen = ['start-screen', 'treasure-screen', 'double-up-screen', 'clear-screen', 'log-screen', 'admin-confirm-modal']
+        .some(id => {
+            const el = document.getElementById(id);
+            return el && el.classList.contains('flex');
+        });
+        
+    if (isUIOpen) return;
+
+    e.preventDefault();
+    holding = true;
+    // ▼修正: 演出中(isGameOverAnimating)はリスタートさせないようにガード
+    if (!running && gameOverScreen.style.display !== "flex" && !isGameOverAnimating) {
+        resetGame();
+    }
+}
+
+function endHold(e) {
+    e.preventDefault();
+    holding = false;
+}
+
+game.addEventListener("pointerdown", startHold);
+game.addEventListener("pointerup", endHold);
+game.addEventListener("pointercancel", endHold);
+game.addEventListener("pointerleave", endHold);
+
+document.addEventListener("keydown", e => {
+    if (e.code === "Space" || e.code === "ArrowUp") {
+        holding = true;
+        
+        const isUIOpen = ['start-screen', 'treasure-screen', 'double-up-screen', 'clear-screen', 'log-screen', 'admin-confirm-modal']
+            .some(id => {
+                const el = document.getElementById(id);
+                return el && el.classList.contains('flex');
+            });
+            
+        if (isUIOpen) return;
+        
+        // ▼修正: 演出中(isGameOverAnimating)はリスタートさせないようにガード
+        if (!running && gameOverScreen.style.display !== "flex" && !isGameOverAnimating) resetGame();
+        e.preventDefault();
+    }
+});
+
+document.addEventListener("keyup", e => {
+    if (e.code === "Space" || e.code === "ArrowUp") {
+        holding = false;
+        e.preventDefault();
+    }
+});
+
+restartButton.addEventListener("click", e => {
+    e.stopPropagation();
+    resetGame();
+});
+
+function loop(time) {
+    if (!lastTime) lastTime = time;
+    const dt = Math.min(time - lastTime, 40);
+    lastTime = time;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(loop);
+}
+
+// 初期化
+initClouds();
+drawBackground();
+createInitialObstacles(); // 背景として少し表示しておく
+requestAnimationFrame(loop);
+
+</script>
+
 </body>
 </html>
